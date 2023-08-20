@@ -8,6 +8,26 @@ body {
   background-color: rgb(17 24 39);
 }
 
+.container {
+  max-height: calc(100vh - 50px);
+  scrollbar-width: "thin";
+  scrollbar-color: black;
+  overflow: auto;
+}
+
+.container::-webkit-scrollbar {
+  width: 5px;
+}
+
+.container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.container::-webkit-scrollbar-thumb {
+  background-color: #374151;
+  border-radius: 8px;
+}
+
 /*! normalize.css v8.0.1 | MIT License | github.com/necolas/normalize.css */
 
 /* Document

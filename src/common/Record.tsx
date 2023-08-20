@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 
 // third party
-import { format, set, setDate } from "date-fns-jalali";
+import { format } from "date-fns-jalali";
 
 // assets
 import { IconCheck, IconPencil, IconTrash, IconX } from "@tabler/icons-react";
@@ -16,7 +16,7 @@ import { Calendar, CalendarProvider } from "zaman";
 interface RecordProps {
   id: string;
   amount: number;
-  date: Date;
+  date: Date | string;
   reason: string;
   label?: string;
   onRemove?: (id: string) => void;
@@ -44,7 +44,9 @@ const Record: React.FC<RecordProps> = ({
   const [amountValue, setAmountValue] = useState(amount);
   const [labelValue, setLabelValue] = useState(label);
   const [reasonValue, setReasonValue] = useState(reason);
-  const [dateValue, setDateValue] = useState(date);
+  const [dateValue, setDateValue] = useState(
+    typeof date === "string" ? new Date(date) : date
+  );
 
   const handleChangeAmount: React.ChangeEventHandler<HTMLInputElement> = ({
     target: { value },
@@ -84,18 +86,18 @@ const Record: React.FC<RecordProps> = ({
             value={amountValue}
             onChange={handleChangeAmount}
             className={clsxm(
-              "text-2xl font-bold border-none",
+              "text-lg sm:text-2xl font-bold border-none",
               amountValue < 0 ? "text-red-500" : "text-green-500"
             )}
           />
         ) : (
           <h2
             className={clsxm(
-              "text-2xl font-bold m-0",
+              "text-lg sm:text-2xl font-bold m-0",
               amount < 0 ? "text-red-500" : "text-green-500"
             )}
           >
-            {`${formatPrice(amount)} ${amount > 0 ? "+" : "-"}`}
+            {`${formatPrice(amount)} ${amount > 0 ? "+" : ""}`}
           </h2>
         )}
 
@@ -122,7 +124,7 @@ const Record: React.FC<RecordProps> = ({
             )}
             onClick={() => setShowCalendar((prev) => !prev)}
           >
-            {format(editMode ? dateValue : date, "yyyy/MM/dd")}
+            {format(editMode ? dateValue : new Date(date), "yyyy/MM/dd")}
           </div>
 
           {editMode && showCalendar && (
@@ -148,7 +150,9 @@ const Record: React.FC<RecordProps> = ({
             className="border-none text-white"
           />
         ) : (
-          <h3 className="text-lg font-bold m-0 text-white">{reason}</h3>
+          <h3 className="text-sm md:text-lg font-bold m-0 text-white">
+            {reason}
+          </h3>
         )}
 
         <div className="flex items-center gap-px">
