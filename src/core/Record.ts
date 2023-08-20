@@ -1,4 +1,4 @@
-class Record {
+class FinancialRecord {
   constructor(
     private _id: string,
     private _amount: number,
@@ -48,4 +48,4 @@ class Record {
   }
 }
 
-export default Record;
+export default FinancialRecord;
