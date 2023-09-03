@@ -97,29 +97,30 @@ const Record: React.FC<RecordProps> = ({
               amount < 0 ? "text-red-500" : "text-green-500"
             )}
           >
-            {`${formatPrice(amount)} ${amount > 0 ? "+" : ""}`}
+            {`${formatPrice(Math.abs(amount))} ${amount > 0 ? "+" : "-"}`}
           </h2>
         )}
 
-        {label &&
-          (editMode ? (
-            <Input
-              type="text"
-              value={labelValue}
-              onChange={handleChangeLabel}
-              className="mr-auto border-orange-500 text-orange-500 rounded-full px-2 py-1 w-fit text-sm text-center"
-            />
-          ) : (
+        {editMode ? (
+          <Input
+            type="text"
+            value={labelValue}
+            onChange={handleChangeLabel}
+            wrapperClassName="w-fit"
+            className="mr-auto w-fit border-orange-500 text-orange-500 rounded-full px-2 py-1 w-fit text-sm text-center"
+          />
+        ) : (
+          label && (
             <div className="rounded-full mr-auto text-sm font-semibold px-2 py-1 border border-orange-500 border-solid text-orange-500">
               {label}
             </div>
-          ))}
+          )
+        )}
 
-        <div className="relative">
+        <div className={clsxm("relative", !label && "mr-auto")}>
           <div
             className={clsxm(
               "rounded-full  text-sm font-semibold px-2 py-1 border border-blue-500 border-solid text-blue-500",
-              !label && "mr-auto",
               editMode && "cursor-pointer"
             )}
             onClick={() => setShowCalendar((prev) => !prev)}
@@ -150,12 +151,12 @@ const Record: React.FC<RecordProps> = ({
             className="border-none text-white"
           />
         ) : (
-          <h3 className="text-sm md:text-lg font-bold m-0 text-white">
+          <h3 className="text-sm md:text-lg font-bold m-0 text-white print:text-gray-700">
             {reason}
           </h3>
         )}
 
-        <div className="flex items-center gap-px">
+        <div className="flex items-center gap-px print:hidden">
           {editMode ? (
             <>
               <Button

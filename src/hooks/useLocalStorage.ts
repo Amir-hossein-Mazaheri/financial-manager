@@ -19,7 +19,7 @@ export default function useLocalStorage<T>(
 
       setValue(parseValue);
     }
-  }, [key]);
+  }, [key, preProcess]);
 
   const handleStoreValue = (newValue: T) => {
     setValue(newValue);

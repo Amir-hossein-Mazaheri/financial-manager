@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 // third party
 import * as uuid from "uuid";
@@ -6,7 +6,7 @@ import ReactModal from "react-modal";
 import { z } from "zod";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format } from "date-fns-jalali";
+import { format, parseISO } from "date-fns-jalali";
 import { Calendar, CalendarProvider } from "zaman";
 
 // assets
@@ -25,6 +25,7 @@ import Record from "./common/Record";
 import Input from "./common/Input";
 import formatPrice from "./utils/formatPrice";
 import clsxm from "./utils/mergeClass";
+import { compareAsc } from "date-fns";
 
 const requiredMsg = "پر کردن این فیلد ضروری است";
 const numberMsg = "این فیلد باید عدد باشد";
@@ -56,6 +57,17 @@ function App() {
   const [date, setDate] = useState(new Date());
 
   const [records, setRecords] = useLocalStorage<Record[]>("records", []);
+
+  const sortedRecords = useMemo(
+    () =>
+      records.sort((a, b) =>
+        compareAsc(
+          parseISO(b.date as unknown as string),
+          parseISO(a.date as unknown as string)
+        )
+      ),
+    [records]
+  );
 
   const formMethods = useForm<z.infer<typeof createRecordSchema>>({
     resolver: zodResolver(createRecordSchema),
@@ -123,14 +135,18 @@ function App() {
   return (
     <Container>
       <div className="flex items-center gap-2">
-        <h1 className="text-xl sm:text-4xl font-bold text-white flex items-center gap-1">
+        <h1 className="text-xl sm:text-4xl font-bold text-white print:text-gray-800 flex items-center gap-1">
           <IconMoneybag size={35} />
 
-          <span>مدیریت مالی</span>
+          <span className="print:hidden">مدیریت مالی</span>
+
+          <span className="hidden print:block">
+            پرینت رکورد های مالی تا تاریخ {format(new Date(), "yyyy/MM/dd")}
+          </span>
         </h1>
 
         <Button
-          className="mr-auto"
+          className="mr-auto print:hidden"
           onClick={handleOpenCreateDialog}
           startIcon={<IconPlus />}
         >
@@ -138,8 +154,9 @@ function App() {
         </Button>
 
         <Button
-          className="bg-blue-600 hover:bg-blue-700"
+          className="bg-blue-600 hover:bg-blue-700 print:hidden"
           startIcon={<IconPrinter />}
+          onClick={() => window.print()}
         >
           <span className="hidden sm:block">پرینت</span>
         </Button>
@@ -255,8 +272,9 @@ function App() {
       ) : (
         <div className="container mt-5">
           <div className="space-y-8 px-5 pb-32">
-            {records.map((record) => (
+            {sortedRecords.map((record) => (
               <Record
+                key={record.id}
                 id={record.id}
                 amount={record.amount}
                 date={record.date}
