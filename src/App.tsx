@@ -6,7 +6,7 @@ import ReactModal from "react-modal";
 import { z } from "zod";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format, parseISO } from "date-fns-jalali";
+import { format, parseISO, compareAsc } from "date-fns-jalali";
 import { Calendar, CalendarProvider } from "zaman";
 
 // assets
@@ -25,7 +25,7 @@ import Record from "./common/Record";
 import Input from "./common/Input";
 import formatPrice from "./utils/formatPrice";
 import clsxm from "./utils/mergeClass";
-import { compareAsc } from "date-fns";
+import toExactDate from "./utils/toExactDate";
 
 const requiredMsg = "پر کردن این فیلد ضروری است";
 const numberMsg = "این فیلد باید عدد باشد";
@@ -34,7 +34,7 @@ const minMsg = "حداقل طول این فیلد 3 کاراکتر است";
 type Record = {
   id: string;
   amount: number;
-  date: Date;
+  date: string;
   reason: string;
   label?: string;
 };
@@ -96,7 +96,7 @@ function App() {
     const newRecord: Record = {
       id: uuid.v4(),
       amount,
-      date,
+      date: toExactDate(date),
       reason,
       label,
     };
@@ -124,7 +124,7 @@ function App() {
     copyRecords[recordIndex] = {
       id,
       amount,
-      date,
+      date: toExactDate(date),
       reason,
       label,
     };
