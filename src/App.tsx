@@ -1,16 +1,17 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 // third party
-import * as uuid from "uuid";
 import ReactModal from "react-modal";
 import { z } from "zod";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format, parseISO, compareAsc } from "date-fns-jalali";
+import { format, parseISO } from "date-fns-jalali";
 import { Calendar, CalendarProvider } from "zaman";
+import type { Record as TRecord } from "@prisma/client";
 
 // assets
 import {
+  IconJson,
   IconMoneybag,
   IconPlus,
   IconPrinter,
@@ -20,29 +21,22 @@ import {
 // project imports
 import Button from "./common/Button";
 import Container from "./common/Container";
-import useLocalStorage from "./hooks/useLocalStorage";
+import usePaginatedRecords from "./hooks/usePaginatedRecords";
 import Record from "./common/Record";
 import Input from "./common/Input";
 import formatPrice from "./utils/formatPrice";
 import clsxm from "./utils/mergeClass";
-import toExactDate from "./utils/toExactDate";
+import useSwal from "./hooks/useSwal";
+import "./types";
 
 const requiredMsg = "پر کردن این فیلد ضروری است";
 const numberMsg = "این فیلد باید عدد باشد";
 const minMsg = "حداقل طول این فیلد 3 کاراکتر است";
 
-type Record = {
-  id: string;
-  amount: number;
-  date: string;
-  reason: string;
-  label?: string;
-};
-
 const createRecordSchema = z.object({
   amount: z.preprocess(
-    (val: unknown) => parseFloat(val as string),
-    z.number({ invalid_type_error: numberMsg, required_error: requiredMsg })
+    (val: unknown) => BigInt(val as string),
+    z.bigint({ invalid_type_error: numberMsg, required_error: requiredMsg })
   ),
   reason: z
     .string()
@@ -56,18 +50,18 @@ function App() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [date, setDate] = useState(new Date());
 
-  const [records, setRecords] = useLocalStorage<Record[]>("records", []);
+  const {
+    records,
+    createRecord,
+    updateRecord,
+    removeRecord,
+    // page,
+    // nextPage,
+    // prevPage,
+    // setPage,
+  } = usePaginatedRecords();
 
-  const sortedRecords = useMemo(
-    () =>
-      records.sort((a, b) =>
-        compareAsc(
-          parseISO(b.date as unknown as string),
-          parseISO(a.date as unknown as string)
-        )
-      ),
-    [records]
-  );
+  const swal = useSwal();
 
   const formMethods = useForm<z.infer<typeof createRecordSchema>>({
     resolver: zodResolver(createRecordSchema),
@@ -88,48 +82,89 @@ function App() {
     setShowDatePicker(false);
   };
 
-  const handleAddRecord: SubmitHandler<z.infer<typeof createRecordSchema>> = ({
-    amount,
-    reason,
-    label,
-  }) => {
-    const newRecord: Record = {
-      id: uuid.v4(),
-      amount,
-      date: toExactDate(date),
+  const handleAddRecord: SubmitHandler<
+    z.infer<typeof createRecordSchema>
+  > = async ({ amount, reason, label }) => {
+    const newRecord: Omit<TRecord, "id" | "date"> = {
+      amount: BigInt(amount),
       reason,
-      label,
+      label: label ?? null,
     };
 
-    setRecords([...records, newRecord]);
+    try {
+      await createRecord(newRecord);
+    } catch (e) {
+      console.log("add record err: ", e);
+    }
+
     reset();
     setShowCreateDialog(false);
   };
 
   const handleRemoveRecord = (id: string) => {
-    setRecords(records.filter((record) => record.id !== id));
+    removeRecord(id);
   };
 
   const handleEditRecord = (
     id: string,
-    amount: number,
+    amount: bigint,
     reason: string,
     date: Date,
     label?: string
   ) => {
-    const copyRecords = [...records];
-
-    const recordIndex = copyRecords.findIndex((record) => record.id === id);
-
-    copyRecords[recordIndex] = {
-      id,
+    updateRecord(id, {
       amount,
-      date: toExactDate(date),
+      date,
       reason,
-      label,
-    };
+      label: label ?? null,
+    });
+  };
 
-    setRecords(copyRecords);
+  const handleImportLog = async () => {
+    const { isConfirmed } = await swal.fire({
+      icon: "error",
+      title: "اخطار",
+      text: "با انجام این کار رکود های ثبت شده تا الان از بین می رن، هنوزم می خوای ادامه بدی؟",
+      showConfirmButton: true,
+      showCancelButton: true,
+      confirmButtonText: "مشکلی نیس",
+      cancelButtonText: "نه بی خیال",
+    });
+
+    if (!isConfirmed) return;
+
+    const fileDialog = await window.electron.openDialog("showOpenDialog", {
+      title: "لاگ رو انتخاب کنین",
+      properties: ["openFile"],
+      filters: [
+        {
+          name: "JSON",
+          extensions: ["json"],
+        },
+      ],
+    });
+
+    if (fileDialog.canceled) return;
+
+    const logContent = await window.electron.readFile(fileDialog.filePaths[0]);
+
+    const parsedContent = JSON.parse(logContent);
+
+    const recordSchema = z.array(
+      z.object({
+        id: z.string().nonempty(),
+        amount: z.number(),
+        date: z.preprocess((val) => parseISO(val as string), z.date()),
+        reason: z.string().nonempty(),
+        label: z.string().optional(),
+      })
+    );
+
+    const validation = await recordSchema.safeParseAsync(parsedContent);
+
+    if (!validation.success) return;
+
+    validation.data;
   };
 
   return (
@@ -160,6 +195,12 @@ function App() {
         >
           <span className="hidden sm:block">پرینت</span>
         </Button>
+
+        <Button
+          className="bg-red-600 hover:bg-red-700 print:hidden"
+          startIcon={<IconJson />}
+          onClick={handleImportLog}
+        />
       </div>
 
       <ReactModal
@@ -198,7 +239,7 @@ function App() {
                   {...register("amount")}
                 />
 
-                {watch("amount") && (
+                {!!watch("amount") && (
                   <p
                     className={clsxm(
                       "absolute bottom-0 right-0 translate-y-full -mb-1 text-sm",
@@ -270,16 +311,16 @@ function App() {
           </h2>
         </div>
       ) : (
-        <div className="container mt-5">
+        <div className="container overflow-auto mt-5">
           <div className="space-y-8 px-5 pb-32">
-            {sortedRecords.map((record) => (
+            {records.map((record) => (
               <Record
-                key={record.id}
+                key={record.id.toString()}
                 id={record.id}
                 amount={record.amount}
                 date={record.date}
                 reason={record.reason}
-                label={record.label}
+                label={record.label ?? undefined}
                 onEdit={handleEditRecord}
                 onRemove={handleRemoveRecord}
               />

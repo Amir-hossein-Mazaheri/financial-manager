@@ -12,7 +12,6 @@ body {
   max-height: calc(100vh - 50px);
   scrollbar-width: "thin";
   scrollbar-color: black;
-  overflow: auto;
 }
 
 .container::-webkit-scrollbar {

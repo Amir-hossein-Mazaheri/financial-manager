@@ -2,6 +2,7 @@ import React, { useState } from "react";
 
 // third party
 import { format } from "date-fns-jalali";
+import { Calendar, CalendarProvider } from "zaman";
 
 // assets
 import { IconCheck, IconPencil, IconTrash, IconX } from "@tabler/icons-react";
@@ -11,18 +12,17 @@ import formatPrice from "../utils/formatPrice";
 import clsxm from "../utils/mergeClass";
 import Button from "./Button";
 import Input from "./Input";
-import { Calendar, CalendarProvider } from "zaman";
 
 interface RecordProps {
   id: string;
-  amount: number;
+  amount: bigint;
   date: Date | string;
   reason: string;
   label?: string;
   onRemove?: (id: string) => void;
   onEdit: (
     id: string,
-    amount: number,
+    amount: bigint,
     reason: string,
     date: Date,
     label?: string
@@ -51,7 +51,7 @@ const Record: React.FC<RecordProps> = ({
   const handleChangeAmount: React.ChangeEventHandler<HTMLInputElement> = ({
     target: { value },
   }) => {
-    setAmountValue(parseFloat(value));
+    setAmountValue(BigInt(value));
   };
 
   const handleChangeLabel: React.ChangeEventHandler<HTMLInputElement> = ({
@@ -83,7 +83,7 @@ const Record: React.FC<RecordProps> = ({
         {editMode ? (
           <Input
             type="text"
-            value={amountValue}
+            value={amountValue.toString()}
             onChange={handleChangeAmount}
             className={clsxm(
               "text-lg sm:text-2xl font-bold border-none",
@@ -97,7 +97,9 @@ const Record: React.FC<RecordProps> = ({
               amount < 0 ? "text-red-500" : "text-green-500"
             )}
           >
-            {`${formatPrice(Math.abs(amount))} ${amount > 0 ? "+" : "-"}`}
+            {`${formatPrice(amount >= 0 ? amount : amount * BigInt(-1))} ${
+              amount > 0 ? "+" : "-"
+            }`}
           </h2>
         )}
 

@@ -8,7 +8,7 @@ interface ButtonProps
     React.ButtonHTMLAttributes<HTMLButtonElement>,
     HTMLButtonElement
   > {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   className?: string;
   startIcon?: React.ReactNode;
   endIcon?: React.ReactNode;
@@ -31,7 +31,7 @@ const Button: React.FC<ButtonProps> = ({
     >
       {startIcon && <span className="flex">{startIcon}</span>}
 
-      {children}
+      {children && children}
 
       {endIcon && <span className="flex">{endIcon}</span>}
     </button>

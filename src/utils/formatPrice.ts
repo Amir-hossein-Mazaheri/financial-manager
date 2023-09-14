@@ -1,4 +1,4 @@
-export default function formatPrice(number: number) {
+export default function formatPrice(number: bigint) {
   return new Intl.NumberFormat("ir-IR", {
     style: "currency",
     currency: "RIs",
