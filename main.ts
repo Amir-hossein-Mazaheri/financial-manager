@@ -47,14 +47,15 @@ app
 
     ipcMain.handle("readFile", (event, path) => readJson(path));
 
-    ipcMain.handle("records", (action, ...args) =>
+    ipcMain.handle("records", (event, action, ...args) =>
       prisma.record[action](...args)
     );
 
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });
-  });
+  })
+  .catch(console.log);
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
