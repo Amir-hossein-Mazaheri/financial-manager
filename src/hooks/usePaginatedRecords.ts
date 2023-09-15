@@ -5,10 +5,16 @@ import { Record } from "@prisma/client";
 
 export default function usePaginatedRecords(perPage = 15) {
   const [page, setPage] = useState(1);
-  const [value, setValue] = useState<Record[]>([]);
+  const [records, setRecords] = useState<Record[]>([]);
+  const [pagesCount, setPagesCount] = useState(1);
+  const [count, setCount] = useState(0);
 
-  const updateValue = useCallback(
-    async (page: number) => {
+  // should be called after any mutations on records because
+  // data in managed in database and here is just a snapshot of
+  // a piece of data to make the experience much more sweater for
+  // user and memory friendly
+  const updateRecords = useCallback(
+    async (page: number, updatePagesCount = true) => {
       const records = await window.electron.records("findMany", {
         skip: (page - 1) * perPage,
         take: perPage,
@@ -17,30 +23,40 @@ export default function usePaginatedRecords(perPage = 15) {
         },
       });
 
-      setValue(records);
+      if (updatePagesCount) {
+        const recordsCount = await window.electron.records("count");
+        setCount(recordsCount);
+        setPagesCount(Math.ceil(recordsCount / perPage));
+      }
+
+      setRecords(records);
     },
     [perPage]
   );
 
   const prevPage = useCallback(() => {
+    if (page === 1) return;
+
     setPage((currPage) => currPage - 1);
-  }, []);
+  }, [page]);
 
   const nextPage = useCallback(() => {
+    if (page === pagesCount) return;
+
     setPage((currPage) => currPage + 1);
-  }, []);
+  }, [page, pagesCount]);
 
   const createRecord = useCallback(
-    async (record: Omit<Record, "id" | "date">) => {
+    async (record: Omit<Record, "id">) => {
       const newRecord = await window.electron.records("create", {
         data: record,
       });
 
-      updateValue(page);
+      updateRecords(page);
 
       return newRecord;
     },
-    [page, updateValue]
+    [page, updateRecords]
   );
 
   const updateRecord = useCallback(
@@ -52,11 +68,11 @@ export default function usePaginatedRecords(perPage = 15) {
         data: record,
       });
 
-      updateValue(page);
+      updateRecords(page, false);
 
       return updatedRecord;
     },
-    [page, updateValue]
+    [page, updateRecords]
   );
 
   const removeRecord = useCallback(
@@ -67,19 +83,57 @@ export default function usePaginatedRecords(perPage = 15) {
         },
       });
 
-      updateValue(page);
+      if (Math.ceil((count - 1) / perPage) !== pagesCount) {
+        prevPage();
+      }
+
+      updateRecords(page);
 
       return deletedRecord;
     },
-    [page, updateValue]
+    [count, page, pagesCount, perPage, prevPage, updateRecords]
   );
 
+  const importRecords = useCallback(
+    async (records: (Omit<Record, "id"> & { id?: string })[]) => {
+      await window.electron.createManyRecords(records);
+
+      updateRecords(page);
+    },
+    [page, updateRecords]
+  );
+
+  const exportRecords = useCallback(async () => {
+    const rawRecords = await window.electron.records("findMany", {
+      orderBy: {
+        date: "desc",
+      },
+    });
+
+    return JSON.stringify(
+      rawRecords.map((r) => {
+        const recordCopy: Omit<Partial<Record>, "amount"> & {
+          amount: string | bigint;
+        } = {
+          ...r,
+        };
+
+        delete recordCopy.id;
+
+        recordCopy.amount = recordCopy.amount?.toString();
+
+        return recordCopy as Omit<Record, "id">;
+      })
+    );
+  }, []);
+
   useEffect(() => {
-    updateValue(page);
-  }, [page, updateValue]);
+    updateRecords(page);
+  }, [page, updateRecords]);
 
   return {
-    records: value,
+    records,
+    recordsCount: count,
     page,
     setPage,
     prevPage,
@@ -87,5 +141,8 @@ export default function usePaginatedRecords(perPage = 15) {
     createRecord,
     updateRecord,
     removeRecord,
+    pagesCount,
+    importRecords,
+    exportRecords,
   };
 }

@@ -11,7 +11,8 @@ import type { Record as TRecord } from "@prisma/client";
 
 // assets
 import {
-  IconJson,
+  IconDatabaseExport,
+  IconDatabaseImport,
   IconMoneybag,
   IconPlus,
   IconPrinter,
@@ -27,6 +28,7 @@ import Input from "./common/Input";
 import formatPrice from "./utils/formatPrice";
 import clsxm from "./utils/mergeClass";
 import useSwal from "./hooks/useSwal";
+import Pagination from "./components/Pagination";
 import "./types";
 
 const requiredMsg = "پر کردن این فیلد ضروری است";
@@ -55,10 +57,13 @@ function App() {
     createRecord,
     updateRecord,
     removeRecord,
-    // page,
-    // nextPage,
-    // prevPage,
-    // setPage,
+    exportRecords,
+    importRecords,
+    page,
+    nextPage,
+    prevPage,
+    setPage,
+    pagesCount,
   } = usePaginatedRecords();
 
   const swal = useSwal();
@@ -85,17 +90,14 @@ function App() {
   const handleAddRecord: SubmitHandler<
     z.infer<typeof createRecordSchema>
   > = async ({ amount, reason, label }) => {
-    const newRecord: Omit<TRecord, "id" | "date"> = {
+    const newRecord: Omit<TRecord, "id"> = {
       amount: BigInt(amount),
+      date,
       reason,
       label: label ?? null,
     };
 
-    try {
-      await createRecord(newRecord);
-    } catch (e) {
-      console.log("add record err: ", e);
-    }
+    await createRecord(newRecord);
 
     reset();
     setShowCreateDialog(false);
@@ -122,12 +124,12 @@ function App() {
 
   const handleImportLog = async () => {
     const { isConfirmed } = await swal.fire({
-      icon: "error",
-      title: "اخطار",
-      text: "با انجام این کار رکود های ثبت شده تا الان از بین می رن، هنوزم می خوای ادامه بدی؟",
+      icon: "warning",
+      title: "هشدار",
+      text: "با اینکار رکورد های جدید به رکورد های فعلی اضافه می شوند و بینشون پخش می شن حواست هست دیگه؟",
       showConfirmButton: true,
       showCancelButton: true,
-      confirmButtonText: "مشکلی نیس",
+      confirmButtonText: "اره بابا",
       cancelButtonText: "نه بی خیال",
     });
 
@@ -152,19 +154,76 @@ function App() {
 
     const recordSchema = z.array(
       z.object({
-        id: z.string().nonempty(),
-        amount: z.number(),
+        id: z.string().optional(),
+        amount: z.preprocess((val) => BigInt(val as string), z.bigint()),
         date: z.preprocess((val) => parseISO(val as string), z.date()),
         reason: z.string().nonempty(),
-        label: z.string().optional(),
+        label: z.string().nullish(),
       })
     );
 
     const validation = await recordSchema.safeParseAsync(parsedContent);
 
-    if (!validation.success) return;
+    if (!validation.success) {
+      await swal.fire({
+        icon: "error",
+        title: "خطا",
+        text: "فرمت فایل JSON درست نیس دوباره با فرمت صحیح تلاش کن",
+        confirmButtonText: "حله",
+      });
 
-    validation.data;
+      return;
+    }
+
+    await importRecords(
+      validation.data.map((r) => ({
+        ...r,
+        label: r.label ?? null,
+      }))
+    );
+
+    swal.fire({
+      title: "هوراا !",
+      text: "محتویات فایل با موفقیت وارد شدند",
+      icon: "success",
+    });
+  };
+
+  const handleExportLog = async () => {
+    const { isConfirmed } = await swal.fire({
+      icon: "info",
+      title: "بکاپ گیری",
+      text: "پس می خوای که از رکورد های مالی خروجی یا بکاپ بگیری؟",
+      showConfirmButton: true,
+      showCancelButton: true,
+      confirmButtonText: "معلومه که میخوام",
+      cancelButtonText: "نه بکاپ چی چیه دیگه",
+    });
+
+    if (!isConfirmed) return;
+
+    const fileDialog = await window.electron.openDialog("showSaveDialog", {
+      title: "کجا می خوای سیوش کنی؟",
+      properties: ["openDirectory"],
+    });
+
+    if (fileDialog.canceled || !fileDialog?.filePath?.[0]) return;
+
+    let filePath = fileDialog.filePath;
+
+    if (filePath.split(".").at(-1) !== "json") {
+      filePath += ".json";
+    }
+
+    await window.electron.writeFile(filePath, await exportRecords(), {
+      flag: "w+",
+    });
+
+    await swal.fire({
+      title: "هوراا !",
+      text: "بکاپ با موفیت ذخیره شد برو عشق کن",
+      icon: "success",
+    });
   };
 
   return (
@@ -198,8 +257,14 @@ function App() {
 
         <Button
           className="bg-red-600 hover:bg-red-700 print:hidden"
-          startIcon={<IconJson />}
+          startIcon={<IconDatabaseImport />}
           onClick={handleImportLog}
+        />
+
+        <Button
+          className="bg-violet-600 hover:bg-violet-700 print:hidden"
+          startIcon={<IconDatabaseExport />}
+          onClick={handleExportLog}
         />
       </div>
 
@@ -311,20 +376,30 @@ function App() {
           </h2>
         </div>
       ) : (
-        <div className="container overflow-auto mt-5">
-          <div className="space-y-8 px-5 pb-32">
-            {records.map((record) => (
-              <Record
-                key={record.id.toString()}
-                id={record.id}
-                amount={record.amount}
-                date={record.date}
-                reason={record.reason}
-                label={record.label ?? undefined}
-                onEdit={handleEditRecord}
-                onRemove={handleRemoveRecord}
-              />
-            ))}
+        <div className="container overflow-auto mt-5 h-full">
+          <div className="flex flex-col justify-between h-full space-y-14 pb-32">
+            <div className="space-y-8 px-5">
+              {records.map((record) => (
+                <Record
+                  key={record.id.toString()}
+                  id={record.id}
+                  amount={record.amount}
+                  date={record.date}
+                  reason={record.reason}
+                  label={record.label ?? undefined}
+                  onEdit={handleEditRecord}
+                  onRemove={handleRemoveRecord}
+                />
+              ))}
+            </div>
+
+            <Pagination
+              count={pagesCount}
+              page={page}
+              onPrev={prevPage}
+              onNext={nextPage}
+              onChange={setPage}
+            />
           </div>
         </div>
       )}

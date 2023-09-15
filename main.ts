@@ -1,6 +1,6 @@
 const { join } = require("path");
 const { app, BrowserWindow, dialog, ipcMain } = require("electron");
-const { readFile } = require("fs/promises");
+const { readFile, writeFile } = require("fs/promises");
 const { PrismaClient } = require("@prisma/client");
 
 if (require("electron-squirrel-startup")) {
@@ -50,6 +50,18 @@ app
     ipcMain.handle("records", (event, action, ...args) =>
       prisma.record[action](...args)
     );
+
+    ipcMain.handle("createManyRecord", (event, records) =>
+      prisma.$transaction(async (tx) => {
+        for (const record of records) {
+          await tx.record.create({
+            data: record,
+          });
+        }
+      })
+    );
+
+    ipcMain.handle("writeFile", (event, ...args) => writeFile(...args));
 
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();

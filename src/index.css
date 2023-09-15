@@ -27,6 +27,16 @@ body {
   border-radius: 8px;
 }
 
+.swal2-actions {
+  flex-direction: row-reverse;
+}
+
+.swal2-popup {
+  background: rgb(31, 41, 55);
+  color: white;
+  /* bg-gray-800 */
+}
+
 /*! normalize.css v8.0.1 | MIT License | github.com/necolas/normalize.css */
 
 /* Document

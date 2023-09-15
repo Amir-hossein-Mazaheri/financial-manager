@@ -14,5 +14,8 @@ window.addEventListener("DOMContentLoaded", () => {
 contextBridge.exposeInMainWorld("electron", {
   openDialog: (method, config) => ipcRenderer.invoke("dialog", method, config),
   readFile: (path) => ipcRenderer.invoke("readFile", path),
+  writeFile: (...args) => ipcRenderer.invoke("writeFile", ...args),
   records: (action, ...args) => ipcRenderer.invoke("records", action, ...args),
+  createManyRecords: (records) =>
+    ipcRenderer.invoke("createManyRecord", records),
 });
