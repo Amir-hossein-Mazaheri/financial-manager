@@ -103,7 +103,21 @@ function App() {
     setShowCreateDialog(false);
   };
 
-  const handleRemoveRecord = (id: string) => {
+  const handleRemoveRecord = async (id: string) => {
+    const record = records.find((record) => record.id === id);
+
+    const { isConfirmed } = await swal.fire({
+      icon: "error",
+      title: "اخطار",
+      text: `واقعا می خوای رکورد "${record?.reason}" رو حذفش کنی؟`,
+      showConfirmButton: true,
+      showCancelButton: true,
+      confirmButtonText: "اره، نمی خوامش",
+      cancelButtonText: "نه بی خیال",
+    });
+
+    if (!isConfirmed) return;
+
     removeRecord(id);
   };
 
@@ -182,7 +196,7 @@ function App() {
       }))
     );
 
-    swal.fire({
+    await swal.fire({
       title: "هوراا !",
       text: "محتویات فایل با موفقیت وارد شدند",
       icon: "success",
@@ -243,17 +257,13 @@ function App() {
           className="mr-auto print:hidden"
           onClick={handleOpenCreateDialog}
           startIcon={<IconPlus />}
-        >
-          <span className="hidden sm:block">ایجاد رکورد جدید</span>
-        </Button>
+        />
 
         <Button
           className="bg-blue-600 hover:bg-blue-700 print:hidden"
           startIcon={<IconPrinter />}
           onClick={() => window.print()}
-        >
-          <span className="hidden sm:block">پرینت</span>
-        </Button>
+        />
 
         <Button
           className="bg-red-600 hover:bg-red-700 print:hidden"

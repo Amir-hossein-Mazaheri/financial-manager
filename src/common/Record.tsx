@@ -42,7 +42,7 @@ const Record: React.FC<RecordProps> = ({
   const [showCalendar, setShowCalendar] = useState(false);
 
   const [amountValue, setAmountValue] = useState(amount);
-  const [labelValue, setLabelValue] = useState(label);
+  const [labelValue, setLabelValue] = useState(label ?? "");
   const [reasonValue, setReasonValue] = useState(reason);
   const [dateValue, setDateValue] = useState(
     typeof date === "string" ? new Date(date) : date
