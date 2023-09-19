@@ -27,3 +27,4 @@ dist-ssr
 .env
 sample.json
 prisma/dev.db
+src/database
