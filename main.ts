@@ -1,7 +1,7 @@
 const { join } = require("path");
 const { app, BrowserWindow, dialog, ipcMain } = require("electron");
 const { readFile, writeFile } = require("fs/promises");
-const { PrismaClient } = require("@prisma/client");
+const { PrismaClient } = require("./src/database");
 
 if (require("electron-squirrel-startup")) {
   app.quit();
@@ -18,8 +18,11 @@ function createWindow() {
     webPreferences: {
       preload: join(__dirname, "preload.ts"),
       nodeIntegration: true,
+      devTools: isDev,
     },
   });
+
+  mainWindow.menuBarVisible = false;
 
   if (isDev) {
     mainWindow.webContents.openDevTools();

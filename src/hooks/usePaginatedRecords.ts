@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
-// third party
-import { Record } from "@prisma/client";
+// project imports
+import { Record } from "../database/index";
 
 export default function usePaginatedRecords(perPage = 15) {
   const [page, setPage] = useState(1);

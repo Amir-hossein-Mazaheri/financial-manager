@@ -1,10 +1,9 @@
-import { PrismaClient, Record } from "@prisma/client";
+import { type PrismaClient, type Record } from "./database/index";
 import { type Dialog } from "electron";
 import { type PathLike } from "fs";
 import { writeFile, type FileHandle } from "fs/promises";
 
-const p = new PrismaClient();
-type PrismaRecord = typeof p.record;
+type PrismaRecord = PrismaClient["record"];
 
 // adds electron types which are added externally to window
 declare global {

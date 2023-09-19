@@ -7,12 +7,14 @@ import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format, parseISO } from "date-fns-jalali";
 import { Calendar, CalendarProvider } from "zaman";
-import type { Record as TRecord } from "@prisma/client";
+import { useAutoAnimate } from "@formkit/auto-animate/react";
 
 // assets
 import {
   IconDatabaseExport,
   IconDatabaseImport,
+  IconEye,
+  IconEyeOff,
   IconMoneybag,
   IconPlus,
   IconPrinter,
@@ -29,6 +31,8 @@ import formatPrice from "./utils/formatPrice";
 import clsxm from "./utils/mergeClass";
 import useSwal from "./hooks/useSwal";
 import Pagination from "./components/Pagination";
+import type { Record as TRecord } from "./database/index";
+import toExactDate from "./utils/toExactDate";
 import "./types";
 
 const requiredMsg = "پر کردن این فیلد ضروری است";
@@ -48,9 +52,12 @@ const createRecordSchema = z.object({
 });
 
 function App() {
+  const [recordsParent] = useAutoAnimate();
+
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [date, setDate] = useState(new Date());
+  const [hide, setHide] = useState(false);
 
   const {
     records,
@@ -74,6 +81,10 @@ function App() {
 
   const { handleSubmit, register, watch, reset } = formMethods;
 
+  const handleToggleHide = () => {
+    setHide(!hide);
+  };
+
   const handleOpenCreateDialog = () => {
     setShowCreateDialog(true);
   };
@@ -91,8 +102,8 @@ function App() {
     z.infer<typeof createRecordSchema>
   > = async ({ amount, reason, label }) => {
     const newRecord: Omit<TRecord, "id"> = {
-      amount: BigInt(amount),
-      date,
+      amount,
+      date: toExactDate(date),
       reason,
       label: label ?? null,
     };
@@ -118,7 +129,7 @@ function App() {
 
     if (!isConfirmed) return;
 
-    removeRecord(id);
+    await removeRecord(id);
   };
 
   const handleEditRecord = (
@@ -130,7 +141,7 @@ function App() {
   ) => {
     updateRecord(id, {
       amount,
-      date,
+      date: toExactDate(date),
       reason,
       label: label ?? null,
     });
@@ -388,7 +399,22 @@ function App() {
       ) : (
         <div className="container overflow-auto mt-5 h-full">
           <div className="flex flex-col justify-between h-full space-y-14 pb-32">
-            <div className="space-y-8 px-5">
+            <div className="flex items-center">
+              <Button
+                onClick={handleToggleHide}
+                endIcon={
+                  hide ? <IconEye size={14} /> : <IconEyeOff size={14} />
+                }
+                className="bg-blue-600 hover:bg-blue-700 print:hidden text-sm mr-auto"
+              >
+                {hide ? "نمایش بده" : "مخفی کن"}
+              </Button>
+            </div>
+
+            <div
+              className={clsxm("space-y-8 px-5", hide && "filter-blur")}
+              ref={recordsParent}
+            >
               {records.map((record) => (
                 <Record
                   key={record.id.toString()}
